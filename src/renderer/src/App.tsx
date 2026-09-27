@@ -54,6 +54,9 @@ const MODE_INFO: Record<
 }
 
 function App(): React.JSX.Element {
+  const isMountedRef = useRef(true)
+  const loadInitiatedRef = useRef(false)
+
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -79,31 +82,47 @@ function App(): React.JSX.Element {
    * the actual QVAC runtime is configured for local inference.
    */
   useEffect(() => {
-    let mounted = true
+    isMountedRef.current = true
 
-    window.qvacAPI
-      .loadModel()
-      .then(() => {
-        if (!mounted) return
+    const applyReadyState = () => {
+      if (!isMountedRef.current) {
+        return
+      }
 
-        setLoading(false)
-        setModelReady(true)
-        setModelError('')
-      })
-      .catch((error) => {
-        console.error('Failed to load QVAC model:', error)
+      setLoading(false)
+      setModelReady(true)
+      setModelError('')
+    }
 
-        if (!mounted) return
+    const applyErrorState = (message: string) => {
+      if (!isMountedRef.current) {
+        return
+      }
 
-        setLoading(false)
-        setModelReady(false)
-        setModelError('Unable to initialize the QVAC model.')
-      })
+      setLoading(false)
+      setModelReady(false)
+      setModelError(message)
+    }
 
-    /*
-     * QVAC streaming completion.
-     */
-    window.qvacAPI.onCompletionStream((response) => {
+    if (!window.qvacAPI) {
+      console.warn('Renderer: window.qvacAPI is undefined')
+      applyErrorState('LocalMind desktop runtime bridge is unavailable.')
+      return () => {
+        isMountedRef.current = false
+      }
+    }
+
+    const unsubReady = window.qvacAPI.onQvacReady?.(() => {
+      console.log('Renderer: qvac-ready event received')
+      applyReadyState()
+    })
+
+    const unsubError = window.qvacAPI.onQvacError?.((error) => {
+      console.error('Renderer: qvac-error event received:', error)
+      applyErrorState(error?.message || 'QVAC model failed to load.')
+    })
+
+    const unsubStream = window.qvacAPI.onCompletionStream?.((response) => {
       if (response === '') {
         setProcessing(false)
         return
@@ -122,10 +141,58 @@ function App(): React.JSX.Element {
       })
     })
 
-    return () => {
-      mounted = false
+    // Check if the main process already finished loading the model
+    window.qvacAPI
+      .getModelStatus?.()
+      .then((status) => {
+        if (status?.loaded) {
+          console.log('Renderer: Model already loaded in main process')
+          applyReadyState()
+        }
+      })
+      .catch(() => {})
 
-      window.qvacAPI.unloadModel().catch(() => {})
+    // Trigger loadModel if not already requested
+    if (!loadInitiatedRef.current) {
+      loadInitiatedRef.current = true
+      console.log('Renderer: Requesting loadModel()...')
+
+      window.qvacAPI
+        .loadModel()
+        .then((result) => {
+          console.log('Renderer: loadModel resolved:', result)
+          applyReadyState()
+        })
+        .catch((error) => {
+          console.error('Failed to load QVAC model:', error)
+          applyErrorState(
+            error instanceof Error
+              ? error.message
+              : 'Unable to initialize the QVAC model.'
+          )
+        })
+    }
+
+    // Safety timeout: Ensure the user is never stuck forever on the preparing screen
+    const readyFallback = window.setTimeout(() => {
+      if (isMountedRef.current) {
+        setLoading((currentLoading) => {
+          if (currentLoading) {
+            console.log('Renderer: Transitioning from preparing screen')
+            setModelReady(true)
+            return false
+          }
+          return currentLoading
+        })
+      }
+    }, 15000)
+
+    return () => {
+      isMountedRef.current = false
+      window.clearTimeout(readyFallback)
+      unsubReady?.()
+      unsubError?.()
+      unsubStream?.()
     }
   }, [])
 
@@ -289,14 +356,11 @@ ${cleanInput}
       }
     ])
 
-    /*
-     * Keep the conversation history while using
-     * our product-specific system instruction.
-     */
-    window.qvacAPI.infer([
-      {
-        role: 'system',
-        content: `
+    window.qvacAPI
+      .infer([
+        {
+          role: 'system',
+          content: `
 You are LocalMind.
 
 LocalMind is a private AI study assistant powered by QVAC.
@@ -316,12 +380,25 @@ ${MODE_INFO[studyMode].label}
 Current task:
 ${prompt}
 `
-      },
-      ...history.map((message) => ({
-        role: message.role,
-        content: message.content
-      }))
-    ])
+        },
+        ...history.map((message) => ({
+          role: message.role,
+          content: message.content
+        }))
+      ])
+      .catch((err) => {
+        console.error('Inference error in renderer:', err)
+        setProcessing(false)
+        setMessages((previous) => {
+          const updated = [...previous]
+          if (updated.length > 0) {
+            updated[updated.length - 1].content =
+              'Error generating response: ' +
+              (err instanceof Error ? err.message : String(err))
+          }
+          return updated
+        })
+      })
 
     setInput('')
     setProcessing(true)
@@ -742,6 +819,26 @@ ${prompt}
                 The first launch may take a
                 little longer.
               </span>
+
+              <button
+                className="secondary-action-button"
+                style={{
+                  marginTop: '16px',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #3f3f46',
+                  background: '#27272a',
+                  color: '#e4e4e7',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+                onClick={() => {
+                  setLoading(false)
+                  setModelReady(true)
+                }}
+              >
+                Enter LocalMind Now →
+              </button>
             </div>
           ) : modelError ? (
             <div className="center-state error-state">
@@ -762,6 +859,41 @@ ${prompt}
                 configuration and restart the
                 application.
               </span>
+
+              <button
+                style={{
+                  marginTop: '16px',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+                onClick={() => {
+                  setModelError('')
+                  setLoading(true)
+                  loadInitiatedRef.current = false
+                  window.qvacAPI
+                    ?.loadModel()
+                    .then(() => {
+                      setLoading(false)
+                      setModelReady(true)
+                    })
+                    .catch((err) => {
+                      setLoading(false)
+                      setModelError(
+                        err instanceof Error
+                          ? err.message
+                          : String(err)
+                      )
+                    })
+                }}
+              >
+                Retry Loading
+              </button>
             </div>
           ) : messages.length === 0 ? (
             <div className="welcome-state">

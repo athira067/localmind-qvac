@@ -10,9 +10,10 @@
     "composite": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@renderer/*": [
-        "src/renderer/src/*"
+        "./src/renderer/src/*"
       ]
     }
   }

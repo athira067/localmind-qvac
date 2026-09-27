@@ -11,10 +11,38 @@ contextBridge.exposeInMainWorld('qvacAPI', {
     return ipcRenderer.invoke('infer', history)
   },
 
-  onCompletionStream: (cb: (token: string) => void): void => {
-    ipcRenderer.on('completion-stream', (_event, token) => {
+  onCompletionStream: (cb: (token: string) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, token: string): void => {
       cb(token)
-    })
+    }
+    ipcRenderer.on('completion-stream', handler)
+    return () => {
+      ipcRenderer.removeListener('completion-stream', handler)
+    }
+  },
+
+  onQvacReady: (cb: () => void): (() => void) => {
+    const handler = (): void => {
+      cb()
+    }
+    ipcRenderer.on('qvac-ready', handler)
+    return () => {
+      ipcRenderer.removeListener('qvac-ready', handler)
+    }
+  },
+
+  onQvacError: (cb: (error?: { message: string }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, error?: { message: string }): void => {
+      cb(error)
+    }
+    ipcRenderer.on('qvac-error', handler)
+    return () => {
+      ipcRenderer.removeListener('qvac-error', handler)
+    }
+  },
+
+  getModelStatus: (): Promise<{ loaded: boolean; loading: boolean; modelId: string | null }> => {
+    return ipcRenderer.invoke('get-model-status')
   },
 
   unloadModel: (): Promise<string> => {

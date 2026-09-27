@@ -16,7 +16,13 @@ interface Window {
 
     onCompletionStream: (
       cb: (token: string) => void
-    ) => void
+    ) => () => void
+
+    onQvacReady: (cb: () => void) => () => void
+
+    onQvacError: (cb: (error?: { message: string }) => void) => () => void
+
+    getModelStatus: () => Promise<{ loaded: boolean; loading: boolean; modelId: string | null }>
 
     unloadModel: () => Promise<string>
   }

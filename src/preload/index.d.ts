@@ -1,29 +1,20 @@
-ipcMain.handle('load-model', async () => {
-  console.log('Loading QVAC model...')
+﻿export interface QvacAPI {
+  loadModel: () => Promise<string>
+  infer: (history: { role: string; content: string }[]) => Promise<void>
+  onCompletionStream: (cb: (token: string) => void) => () => void
+  onQvacReady: (cb: () => void) => () => void
+  onQvacError: (cb: (error?: { message: string }) => void) => () => void
+  getModelStatus: () => Promise<{ loaded: boolean; loading: boolean; modelId: string | null }>
+  unloadModel: () => Promise<string>
+}
 
-  try {
-    modelId = await loadModel({
-      modelSrc: LLAMA_3_2_1B_INST_Q4_0,
-      modelType: 'llm',
-      onProgress: (progress) => {
-        console.log('QVAC progress:', progress)
+declare global {
+  interface Window {
+    electron: {
+      process: {
+        versions: NodeJS.ProcessVersions
       }
-    })
-
-    console.log('QVAC model loaded!', modelId)
-
-    return 'model loaded'
-  } catch (error) {
-    console.error('========== QVAC LOAD ERROR ==========')
-    console.error(error)
-
-    if (error instanceof Error) {
-      console.error('Message:', error.message)
-      console.error('Stack:', error.stack)
     }
-
-    console.error('======================================')
-
-    throw error
+    qvacAPI: QvacAPI
   }
-})
+}
