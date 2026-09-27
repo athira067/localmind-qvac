@@ -23,24 +23,23 @@ function App(): React.JSX.Element {
         console.error('Failed to load QVAC model:', error)
       })
 
-   window.qvacAPI.onCompletionStream((response) => {
-  if (response === '') {
-    setProcessing(false)
-    return
-  }
+    window.qvacAPI.onCompletionStream((response) => {
+      if (response === '') {
+        setProcessing(false)
+        return
+      }
 
-  setMessages((previous) => {
-    const updated = [...previous]
+      setMessages((previous) => {
+        const updated = [...previous]
 
-    if (updated.length === 0) {
-      return updated
-    }
+        if (updated.length === 0) {
+          return updated
+        }
 
-    updated[updated.length - 1].content = response
+        updated[updated.length - 1].content = response
 
-    return updated
-  })
-
+        return updated
+      })
     })
 
     return () => {
@@ -77,7 +76,8 @@ function App(): React.JSX.Element {
     window.qvacAPI.infer([
       {
         role: 'system',
-        content: 'You are a helpful assistant. Give clear and simple answers.'
+        content:
+          'You are a helpful assistant. Give clear and simple answers.'
       },
       ...history
     ])
@@ -86,233 +86,295 @@ function App(): React.JSX.Element {
     setProcessing(true)
   }
 
+  const handleNewChat = (): void => {
+    if (processing) return
+    setMessages([])
+    setInput('')
+  }
+
+  const handlePrompt = (prompt: string): void => {
+    if (loading || processing) return
+    setInput(prompt)
+  }
+
   return (
-    <div
-      style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#111111',
-        color: '#ffffff',
-        fontFamily: 'Arial, sans-serif'
-      }}
-    >
-      {/* Header */}
+    <div className="app-shell">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-icon">L</div>
 
-      <header
-        style={{
-          padding: '20px',
-          borderBottom: '1px solid #333333',
-          display: 'flex',
-          alignItems: 'center'
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '24px'
-            }}
-          >
-            LocalMind
-          </h1>
-
-          <p
-            style={{
-              margin: '5px 0 0',
-              color: '#999999'
-            }}
-          >
-            Private AI powered by QVAC
-          </p>
+          <div>
+            <div className="brand-name">LocalMind</div>
+            <div className="brand-subtitle">Private AI</div>
+          </div>
         </div>
 
-        <div
-          style={{
-            marginLeft: 'auto',
-            color: loading ? '#f59e0b' : '#22c55e'
-          }}
+        <button
+          className="new-chat-button"
+          onClick={handleNewChat}
+          disabled={processing}
         >
-          ● {loading ? 'Loading local AI...' : 'AI Ready'}
-        </div>
-      </header>
+          <span className="plus-icon">+</span>
+          New Chat
+        </button>
 
-      {/* Chat area */}
+        <div className="sidebar-section">
+          <div className="sidebar-label">ABOUT</div>
 
-      <main
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '25px'
-        }}
-      >
-        {loading ? (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#aaaaaa'
-            }}
-          >
-            <div style={{ textAlign: 'center' }}>
-              <h2>Loading QVAC AI...</h2>
-
-              <p>
-                The AI model is being loaded on your device.
-              </p>
-
-              <p>
-                The first run may take some time.
-              </p>
-            </div>
-          </div>
-        ) : messages.length === 0 ? (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              color: '#888888'
-            }}
-          >
+          <div className="sidebar-info">
+            <div className="info-icon">◆</div>
             <div>
-              <h2 style={{ color: '#ffffff' }}>
-                Welcome to LocalMind
-              </h2>
-
-              <p>
-                Ask a question to your private,
-                on-device AI.
-              </p>
-
-              <p>
-                Your prompt is processed locally using QVAC.
-              </p>
+              <strong>On-device AI</strong>
+              <span>Your conversations stay local.</span>
             </div>
           </div>
-        ) : (
-          messages.map((message, index) => (
-            <div
-              key={index}
-              style={{
-                display: 'flex',
-                justifyContent:
-                  message.role === 'user'
-                    ? 'flex-end'
-                    : 'flex-start',
-                marginBottom: '15px'
-              }}
-            >
-              <div
-                style={{
-                  maxWidth: '75%',
-                  padding: '12px 16px',
-                  borderRadius: '14px',
-                  background:
-                    message.role === 'user'
-                      ? '#4f46e5'
-                      : '#252525',
-                  lineHeight: 1.5,
-                  whiteSpace: 'pre-wrap'
-                }}
-              >
-                {message.content ||
-                  (processing && index === messages.length - 1
-                    ? 'Thinking...'
-                    : '')}
+
+          <div className="sidebar-info">
+            <div className="info-icon">⚡</div>
+            <div>
+              <strong>Powered by QVAC</strong>
+              <span>AI inference runs on your device.</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="sidebar-bottom">
+          <div className="connection-status">
+            <span
+              className={`status-dot ${
+                loading ? 'loading-dot' : ''
+              }`}
+            />
+            <span>
+              {loading ? 'Loading AI...' : 'QVAC AI Ready'}
+            </span>
+          </div>
+
+          <div className="sidebar-version">
+            LocalMind · QVAC
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="main-area">
+        {/* Top bar */}
+        <header className="topbar">
+          <div>
+            <div className="topbar-title">Local AI Assistant</div>
+            <div className="topbar-subtitle">
+              Private intelligence, running locally
+            </div>
+          </div>
+
+          <div className="topbar-status">
+            <span
+              className={`status-dot ${
+                loading ? 'loading-dot' : ''
+              }`}
+            />
+            {loading ? 'Initializing' : 'Online'}
+          </div>
+        </header>
+
+        {/* Chat */}
+        <main className="chat-area">
+          {loading ? (
+            <div className="center-state">
+              <div className="loading-orb">
+                <div className="loading-inner">L</div>
+              </div>
+
+              <h1>Preparing LocalMind</h1>
+
+              <p>
+                QVAC is loading the AI model on your device.
+              </p>
+
+              <div className="loading-message">
+                <span className="loading-spinner" />
+                Initializing local AI...
+              </div>
+
+              <span className="small-note">
+                The first launch may take a little longer.
+              </span>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="welcome-state">
+              <div className="welcome-icon">
+                <span>L</span>
+              </div>
+
+              <div className="welcome-badge">
+                <span className="status-dot" />
+                QVAC · Local AI
+              </div>
+
+              <h1>
+                Welcome to <span>LocalMind</span>
+              </h1>
+
+              <p>
+                A private AI assistant that runs directly on
+                your device.
+              </p>
+
+              <div className="prompt-grid">
+                <button
+                  className="prompt-card"
+                  onClick={() =>
+                    handlePrompt(
+                      'Explain artificial intelligence in simple words.'
+                    )
+                  }
+                >
+                  <span className="prompt-icon">✦</span>
+                  <div>
+                    <strong>Explain something</strong>
+                    <span>
+                      Get a simple explanation of a topic
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  className="prompt-card"
+                  onClick={() =>
+                    handlePrompt(
+                      'Give me three creative ideas for a student project.'
+                    )
+                  }
+                >
+                  <span className="prompt-icon">✧</span>
+                  <div>
+                    <strong>Brainstorm ideas</strong>
+                    <span>
+                      Generate ideas for your next project
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  className="prompt-card"
+                  onClick={() =>
+                    handlePrompt(
+                      'Give me a short summary of why privacy matters in AI.'
+                    )
+                  }
+                >
+                  <span className="prompt-icon">◈</span>
+                  <div>
+                    <strong>Summarize a topic</strong>
+                    <span>
+                      Turn complex ideas into simple points
+                    </span>
+                  </div>
+                </button>
               </div>
             </div>
-          ))
-        )}
+          ) : (
+            <div className="messages-container">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`message-row ${message.role}`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="avatar assistant-avatar">
+                      L
+                    </div>
+                  )}
 
-        <div ref={bottomRef} />
-      </main>
+                  <div className="message-content">
+                    <div className="message-label">
+                      {message.role === 'user'
+                        ? 'You'
+                        : 'LocalMind'}
+                    </div>
 
-      {/* Input */}
+                    <div
+                      className={`message-bubble ${message.role}`}
+                    >
+                      {message.content ||
+                        (processing &&
+                        index === messages.length - 1
+                          ? 'Thinking...'
+                          : '')}
+                    </div>
+                  </div>
 
-      <footer
-        style={{
-          padding: '20px',
-          borderTop: '1px solid #333333'
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            gap: '10px'
-          }}
-        >
-          <textarea
-            rows={2}
-            value={input}
-            disabled={loading || processing}
-            placeholder={
-              loading
-                ? 'Loading local AI...'
-                : 'Ask LocalMind something...'
-            }
-            onChange={(event) => {
-              setInput(event.target.value)
-            }}
-            onKeyDown={(event) => {
-              if (
-                event.key === 'Enter' &&
-                !event.shiftKey
-              ) {
-                event.preventDefault()
-                handleSend()
+                  {message.role === 'user' && (
+                    <div className="avatar user-avatar">
+                      You
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </main>
+
+        {/* Composer */}
+        <footer className="composer-area">
+          <div className="composer">
+            <textarea
+              rows={1}
+              value={input}
+              disabled={loading || processing}
+              placeholder={
+                loading
+                  ? 'Preparing LocalMind...'
+                  : 'Message LocalMind...'
               }
-            }}
-            style={{
-              flex: 1,
-              resize: 'none',
-              padding: '12px',
-              borderRadius: '10px',
-              border: '1px solid #444444',
-              background: '#1d1d1d',
-              color: '#ffffff',
-              outline: 'none'
-            }}
-          />
+              onChange={(event) => {
+                setInput(event.target.value)
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.key === 'Enter' &&
+                  !event.shiftKey
+                ) {
+                  event.preventDefault()
+                  handleSend()
+                }
+              }}
+            />
 
-          <button
-            onClick={handleSend}
-            disabled={loading || processing || !input.trim()}
-            style={{
-              padding: '0 22px',
-              borderRadius: '10px',
-              border: 'none',
-              background:
-                loading || processing || !input.trim()
-                  ? '#444444'
-                  : '#4f46e5',
-              color: '#ffffff',
-              cursor:
-                loading || processing
-                  ? 'not-allowed'
-                  : 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            {processing ? 'Thinking...' : 'Ask AI'}
-          </button>
-        </div>
+            <button
+              className="send-button"
+              onClick={handleSend}
+              disabled={
+                loading ||
+                processing ||
+                !input.trim()
+              }
+              aria-label="Send message"
+            >
+              {processing ? (
+                <span className="button-spinner" />
+              ) : (
+                <span className="send-arrow">↑</span>
+              )}
+            </button>
+          </div>
 
-        <div
-          style={{
-            marginTop: '10px',
-            textAlign: 'center',
-            fontSize: '12px',
-            color: '#777777'
-          }}
-        >
-          🔒 AI inference runs locally on your device using QVAC
-        </div>
-      </footer>
+          <div className="composer-footer">
+            <span>
+              <span className="lock-icon">◆</span>
+              Runs locally on your device
+            </span>
+
+            <span>
+              Press <kbd>Enter</kbd> to send ·{' '}
+              <kbd>Shift + Enter</kbd> for a new line
+            </span>
+          </div>
+        </footer>
+      </div>
     </div>
   )
 }
