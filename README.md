@@ -1,34 +1,41 @@
-# localmind
+# LocalMind
 
-An Electron application with React and TypeScript
+LocalMind is a desktop AI chat application built with Electron, React, TypeScript, and Tether's QVAC SDK.
 
-## Recommended IDE Setup
+It runs an AI language model directly on the user's computer instead of sending prompts to a cloud AI service.
 
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+## Features
 
-## Project Setup
+- Local AI inference using QVAC
+- No cloud AI API key required
+- Chat with a local language model
+- Desktop application built with Electron
+- AI processing happens on the user's device
 
-### Install
+## QVAC
+
+LocalMind uses Tether's QVAC SDK.
+
+QVAC SDK version:
+
+`@qvac/sdk 0.20.0`
+
+The application uses these QVAC functions:
+
+- `loadModel()` — loads the local AI model
+- `completion()` — generates the AI response
+
+## Requirements
+
+- Node.js
+- npm
+- Windows, macOS, or Linux desktop environment
+- Sufficient RAM for the selected local model
+
+## Installation
+
+Clone the repository:
 
 ```bash
-$ npm install
-```
-
-### Development
-
-```bash
-$ npm run dev
-```
-
-### Build
-
-```bash
-# For windows
-$ npm run build:win
-
-# For macOS
-$ npm run build:mac
-
-# For Linux
-$ npm run build:linux
-```
+git clone YOUR_REPOSITORY_URL
+cd localmind
