@@ -21,3 +21,9 @@ contextBridge.exposeInMainWorld('qvacAPI', {
     return ipcRenderer.invoke('unload-model')
   }
 })
+
+contextBridge.exposeInMainWorld('electron', {
+  process: {
+    versions: process.versions
+  }
+})
